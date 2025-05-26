@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #881337;
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    .control-bar {
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      width: calc(100% - 16px);
+      background: linear-gradient(to right, #881337, #b91c1c);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+    .label {
+      font-size: 12px;
+      font-weight: bold;
+      flex: 1;
+    }
+    .fullscreen-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: opacity 0.2s;
+      margin-right: 0;
+    }
+    .fullscreen-btn:hover {
+      opacity: 0.8;
+    }
+    
+    .devtools-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      transition: opacity 0.2s;
+      margin-right: 5px;
+    }
+    
+    .devtools-btn:hover {
+      opacity: 0.8;
+    }
+    
+    .reload-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      transition: opacity 0.2s;
+      margin-right: 5px;
+    }
+    
+    .reload-btn:hover {
+      opacity: 0.8;
+    }
+    
+    /* Styles pour la boîte de dialogue de proxy */
+    .proxy-dialog {
+      position: fixed;
+      top: 30px;
+      right: 10px;
+      width: 250px;
+      background-color: #222;
+      border: 1px solid #881337;
+      border-radius: 4px;
+      padding: 10px;
+      z-index: 9999;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      display: none;
+      color: white;
+    }
+    
+    .proxy-dialog.active {
+      display: block;
+    }
+    
+    .proxy-dialog h3 {
+      margin-top: 0;
+      color: #b91c1c;
+      font-size: 14px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 5px;
+    }
+    
+    .proxy-form-group {
+      margin-bottom: 8px;
+    }
+    
+    .proxy-form-group label {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 3px;
+    }
+    
+    .proxy-form-group input, .proxy-form-group select {
+      width: 100%;
+      padding: 4px;
+      background-color: #333;
+      border: 1px solid #444;
+      color: white;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+    
+    .proxy-dialog-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    
+    .proxy-dialog-buttons button {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 3px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .proxy-save-btn {
+      background-color: #881337;
+      color: white;
+    }
+    
+    .proxy-clear-btn {
+      background-color: #555;
+      color: white;
+    }
+    
+    /* Styles pour le bouton de changement rapide de proxy */
+    .quick-proxy-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      transition: opacity 0.2s;
+      margin-right: 5px;
+    }
+    
+    .quick-proxy-btn:hover {
+      opacity: 0.8;
+    }
+    
+    /* Styles pour le menu de sélection rapide de proxy */
+    .proxy-quick-menu {
+      position: fixed;
+      top: 30px;
+      right: 10px;
+      width: 200px;
+      background-color: #222;
+      border: 1px solid #881337;
+      border-radius: 4px;
+      padding: 5px 0;
+      z-index: 9999;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      display: none;
+      color: white;
+    }
+    
+    .proxy-quick-menu.active {
+      display: block;
+    }
+    
+    .proxy-quick-item {
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .proxy-quick-item:hover {
+      background-color: #333;
+    }
+    
+    .proxy-quick-item.active {
+      background-color: #881337;
+    }
+    
+    .proxy-quick-item-name {
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+    
+    .proxy-quick-item-details {
+      font-size: 10px;
+      color: #aaa;
+    }
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Récupérer le label de l'URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const label = urlParams.get('label') || 'Undefined';
+      const viewId = urlParams.get('viewId') || '0';
+      
+      // Définir le label dans le HTML
+      document.getElementById('view-label').textContent = label;
+
+      // Ajouter l'événement pour le bouton plein écran
+      document.getElementById('fullscreen-btn').addEventListener('click', () => {
+        window.electronAPI.toggleFullscreen();
+      });
+      
+      // Ajouter l'événement pour le bouton DevTools
+      document.getElementById('devtools-btn').addEventListener('click', () => {
+        if (window.electronAPI && window.electronAPI.openDevTools) {
+          window.electronAPI.openDevTools(viewId);
+        }
+      });
+      
+      // Ajouter l'événement pour le bouton Reload
+      document.getElementById('reload-btn').addEventListener('click', () => {
+        if (window.electronAPI && window.electronAPI.reloadView) {
+          window.electronAPI.reloadView(viewId);
+        }
+      });
+      
+      // Éléments de la boîte de dialogue de proxy
+      const proxyDialog = document.getElementById('proxy-dialog');
+      const proxyBtn = document.getElementById('proxy-btn');
+      const proxyEnabled = document.getElementById('proxy-enabled');
+      const proxyProtocol = document.getElementById('proxy-protocol');
+      const proxyHost = document.getElementById('proxy-host');
+      const proxyPort = document.getElementById('proxy-port');
+      const proxyBypass = document.getElementById('proxy-bypass');
+      const proxySaveBtn = document.getElementById('proxy-save-btn');
+      const proxyClearBtn = document.getElementById('proxy-clear-btn');
+      
+      // Fonction pour charger la configuration du proxy
+      async function loadProxyConfig() {
+        if (window.electronAPI && window.electronAPI.getProxyForView) {
+          try {
+            const proxyConfig = await window.electronAPI.getProxyForView(viewId);
+            
+            if (proxyConfig) {
+              proxyEnabled.checked = proxyConfig.enabled || false;
+              proxyProtocol.value = proxyConfig.protocol || 'http';
+              proxyHost.value = proxyConfig.host || '';
+              proxyPort.value = proxyConfig.port || '';
+              proxyBypass.value = proxyConfig.bypassList || '';
+            } else {
+              // Valeurs par défaut
+              proxyEnabled.checked = false;
+              proxyProtocol.value = 'http';
+              proxyHost.value = '';
+              proxyPort.value = '';
+              proxyBypass.value = '';
+            }
+          } catch (error) {
+            console.error('Erreur lors du chargement de la configuration du proxy:', error);
+          }
+        }
+      }
+      
+      // Fonction pour enregistrer la configuration du proxy
+      async function saveProxyConfig() {
+        if (window.electronAPI && window.electronAPI.setProxyForView) {
+          // Valider les entrées
+          if (proxyEnabled.checked && (!proxyHost.value || !proxyPort.value)) {
+            alert('Veuillez saisir l\'hôte et le port du proxy.');
+            return;
+          }
+          
+          // Créer l'objet de configuration
+          const proxyConfig = {
+            enabled: proxyEnabled.checked,
+            protocol: proxyProtocol.value,
+            host: proxyHost.value,
+            port: proxyPort.value,
+            bypassList: proxyBypass.value
+          };
+          
+          try {
+            // Enregistrer la configuration
+            await window.electronAPI.setProxyForView(viewId, proxyConfig);
+            
+            // Appliquer les proxies à toutes les vues
+            await window.electronAPI.applyProxiesToAllViews();
+            
+            // Fermer la boîte de dialogue
+            proxyDialog.classList.remove('active');
+            
+            // Recharger la vue pour appliquer le proxy
+            if (window.electronAPI.reloadView) {
+              window.electronAPI.reloadView(viewId);
+            }
+          } catch (error) {
+            console.error('Erreur lors de l\'enregistrement de la configuration du proxy:', error);
+            alert('Erreur lors de l\'enregistrement de la configuration du proxy.');
+          }
+        }
+      }
+      
+      // Fonction pour supprimer la configuration du proxy
+      async function clearProxyConfig() {
+        if (window.electronAPI && window.electronAPI.removeProxyForView) {
+          try {
+            // Supprimer la configuration
+            await window.electronAPI.removeProxyForView(viewId);
+            
+            // Réinitialiser le formulaire
+            proxyEnabled.checked = false;
+            proxyProtocol.value = 'http';
+            proxyHost.value = '';
+            proxyPort.value = '';
+            proxyBypass.value = '';
+            
+            // Appliquer les proxies à toutes les vues
+            await window.electronAPI.applyProxiesToAllViews();
+            
+            // Fermer la boîte de dialogue
+            proxyDialog.classList.remove('active');
+            
+            // Recharger la vue pour appliquer les changements
+            if (window.electronAPI.reloadView) {
+              window.electronAPI.reloadView(viewId);
+            }
+          } catch (error) {
+            console.error('Erreur lors de la suppression de la configuration du proxy:', error);
+            alert('Erreur lors de la suppression de la configuration du proxy.');
+          }
+        }
+      }
+      
+      // Ajouter l'événement pour le bouton Proxy - version simplifiée
+      proxyBtn.addEventListener('click', (event) => {
+        // Empêcher la propagation de l'événement
+        event.stopPropagation();
+        
+        // Utiliser la nouvelle fonction simplifiée pour configurer le proxy
+        if (window.electronAPI && window.electronAPI.configureProxy) {
+          console.log('Ouverture de la configuration du proxy pour la vue:', viewId);
+          window.electronAPI.configureProxy(viewId);
+        } else {
+          console.error('La fonction configureProxy n\'est pas disponible');
+        }
+      });
+      
+      // Ajouter l'événement pour le bouton Enregistrer
+      proxySaveBtn.addEventListener('click', saveProxyConfig);
+      
+      // Ajouter l'événement pour le bouton Supprimer
+      proxyClearBtn.addEventListener('click', clearProxyConfig);
+      
+      // Fermer la boîte de dialogue si on clique ailleurs
+      document.addEventListener('click', (event) => {
+        // Vérifier si la boîte de dialogue est active et si le clic est en dehors de la boîte et du bouton
+        if (proxyDialog.classList.contains('active') && 
+            !proxyDialog.contains(event.target) && 
+            event.target !== proxyBtn && 
+            !proxyBtn.contains(event.target)) {
+          console.log('Clic en dehors de la boîte de dialogue, fermeture');
+          proxyDialog.classList.remove('active');
+        }
+      });
+      
+      // Empêcher la propagation des clics dans la boîte de dialogue
+      proxyDialog.addEventListener('click', (event) => {
+        event.stopPropagation();
+      });
+      
+      // Gestion du menu de sélection rapide de proxy
+      const quickProxyBtn = document.getElementById('quick-proxy-btn');
+      const proxyQuickMenu = document.getElementById('proxy-quick-menu');
+      
+      // Fonction pour charger les proxies prédéfinis
+      async function loadPresetProxies() {
+        try {
+          // Récupérer la liste des proxies prédéfinis
+          const presetProxies = await window.electronAPI.getPresetProxies();
+          
+          // Récupérer le proxy actuel pour cette vue
+          const currentProxy = await window.electronAPI.getCurrentProxy(viewId);
+          
+          // Vider le menu
+          proxyQuickMenu.innerHTML = '';
+          
+          // Ajouter chaque proxy au menu
+          presetProxies.forEach((proxy, index) => {
+            const item = document.createElement('div');
+            item.className = 'proxy-quick-item';
+            
+            // Marquer l'item actif
+            if (currentProxy && currentProxy.name === proxy.name) {
+              item.classList.add('active');
+            }
+            
+            // Créer le contenu de l'item
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'proxy-quick-item-name';
+            nameDiv.textContent = proxy.name;
+            
+            const detailsDiv = document.createElement('div');
+            detailsDiv.className = 'proxy-quick-item-details';
+            
+            if (proxy.enabled) {
+              if (proxy.host && proxy.port) {
+                detailsDiv.textContent = `${proxy.protocol}://${proxy.host}:${proxy.port}`;
+              } else {
+                detailsDiv.textContent = 'Configuration personnalisée';
+              }
+            } else {
+              detailsDiv.textContent = 'Aucun proxy (connexion directe)';
+            }
+            
+            // Ajouter les éléments au menu
+            item.appendChild(nameDiv);
+            item.appendChild(detailsDiv);
+            proxyQuickMenu.appendChild(item);
+            
+            // Ajouter l'événement de clic pour sélectionner ce proxy
+            item.addEventListener('click', async () => {
+              try {
+                // Appliquer le proxy sélectionné
+                await window.electronAPI.applyProxyByIndex(viewId, index);
+                
+                // Fermer le menu
+                proxyQuickMenu.classList.remove('active');
+                
+                // Mettre à jour l'interface utilisateur
+                loadPresetProxies();
+              } catch (error) {
+                console.error('Erreur lors de l\'application du proxy:', error);
+              }
+            });
+          });
+          
+          // Ajouter un séparateur
+          const separator = document.createElement('div');
+          separator.style.borderTop = '1px solid #444';
+          separator.style.margin = '5px 0';
+          proxyQuickMenu.appendChild(separator);
+          
+          // Ajouter un bouton pour passer au proxy suivant
+          const nextProxyItem = document.createElement('div');
+          nextProxyItem.className = 'proxy-quick-item';
+          nextProxyItem.textContent = 'Passer au proxy suivant';
+          proxyQuickMenu.appendChild(nextProxyItem);
+          
+          // Ajouter l'événement de clic pour passer au proxy suivant
+          nextProxyItem.addEventListener('click', async () => {
+            try {
+              // Passer au proxy suivant
+              await window.electronAPI.switchToNextProxy(viewId);
+              
+              // Fermer le menu
+              proxyQuickMenu.classList.remove('active');
+              
+              // Mettre à jour l'interface utilisateur
+              loadPresetProxies();
+            } catch (error) {
+              console.error('Erreur lors du changement de proxy:', error);
+            }
+          });
+          
+          // Ajouter un bouton pour configurer les proxies
+          const configProxyItem = document.createElement('div');
+          configProxyItem.className = 'proxy-quick-item';
+          configProxyItem.textContent = 'Configurer les proxies...';
+          proxyQuickMenu.appendChild(configProxyItem);
+          
+          // Ajouter l'événement de clic pour ouvrir la configuration des proxies
+          configProxyItem.addEventListener('click', () => {
+            // Fermer le menu rapide
+            proxyQuickMenu.classList.remove('active');
+            
+            // Ouvrir la configuration complète des proxies
+            if (window.electronAPI && window.electronAPI.configureProxy) {
+              window.electronAPI.configureProxy(viewId);
+            }
+          });
+        } catch (error) {
+          console.error('Erreur lors du chargement des proxies prédéfinis:', error);
+        }
+      }
+      
+      // Ajouter l'événement pour le bouton de changement rapide de proxy
+      quickProxyBtn.addEventListener('click', (event) => {
+        // Empêcher la propagation de l'événement
+        event.stopPropagation();
+        
+        // Fermer la boîte de dialogue de configuration si elle est ouverte
+        proxyDialog.classList.remove('active');
+        
+        // Basculer l'affichage du menu rapide
+        if (proxyQuickMenu.classList.contains('active')) {
+          proxyQuickMenu.classList.remove('active');
+        } else {
+          // Charger les proxies avant d'afficher le menu
+          loadPresetProxies().then(() => {
+            proxyQuickMenu.classList.add('active');
+          });
+        }
+      });
+      
+      // Fermer le menu rapide si on clique ailleurs
+      document.addEventListener('click', (event) => {
+        // Vérifier si le menu est actif et si le clic est en dehors du menu et du bouton
+        if (proxyQuickMenu.classList.contains('active') && 
+            !proxyQuickMenu.contains(event.target) && 
+            event.target !== quickProxyBtn && 
+            !quickProxyBtn.contains(event.target)) {
+          proxyQuickMenu.classList.remove('active');
+        }
+      });
+      
+      // Empêcher la propagation des clics dans le menu rapide
+      proxyQuickMenu.addEventListener('click', (event) => {
+        event.stopPropagation();
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="control-bar">
+    <div id="view-label" class="label"></div>
+    <button id="reload-btn" class="reload-btn">
+      <span>🔄</span>
+    </button>
+    <button id="quick-proxy-btn" class="quick-proxy-btn" title="Changer rapidement de proxy">
+      <span>⚡</span>
+    </button>
+    <button id="proxy-btn" class="reload-btn" title="Configurer le proxy">
+      <span>🌐</span>
+    </button>
+    <button id="devtools-btn" class="devtools-btn">
+      <span>🛠</span>
+    </button>
+    <button id="fullscreen-btn" class="fullscreen-btn">
+      <span>⛶</span>
+    </button>
+    
+    <!-- Menu de sélection rapide de proxy -->
+    <div id="proxy-quick-menu" class="proxy-quick-menu">
+      <!-- Les éléments du menu seront ajoutés dynamiquement par JavaScript -->
+    </div>
+    
+    <!-- Boîte de dialogue de configuration du proxy -->
+    <div id="proxy-dialog" class="proxy-dialog">
+      <h3>Configurer le Proxy</h3>
+      <div class="proxy-form-group">
+        <label>
+          <input type="checkbox" id="proxy-enabled"> Activer le proxy
+        </label>
+      </div>
+      <div class="proxy-form-group">
+        <label for="proxy-protocol">Protocole:</label>
+        <select id="proxy-protocol">
+          <option value="http">HTTP</option>
+          <option value="https">HTTPS</option>
+          <option value="socks4">SOCKS4</option>
+          <option value="socks5">SOCKS5</option>
+        </select>
+      </div>
+      <div class="proxy-form-group">
+        <label for="proxy-host">Hôte:</label>
+        <input type="text" id="proxy-host" placeholder="127.0.0.1">
+      </div>
+      <div class="proxy-form-group">
+        <label for="proxy-port">Port:</label>
+        <input type="number" id="proxy-port" placeholder="8080">
+      </div>
+      <div class="proxy-form-group">
+        <label for="proxy-bypass">Contournement (facultatif):</label>
+        <input type="text" id="proxy-bypass" placeholder="localhost, 127.0.0.1">
+      </div>
+      <div class="proxy-dialog-buttons">
+        <button id="proxy-save-btn" class="proxy-save-btn">Enregistrer</button>
+        <button id="proxy-clear-btn" class="proxy-clear-btn">Supprimer</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

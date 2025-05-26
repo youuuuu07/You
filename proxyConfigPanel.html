@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Configuration des Proxies</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #1a1a1a;
+      color: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 {
+      color: #881337;
+      margin-top: 0;
+      border-bottom: 2px solid #b91c1c;
+      padding-bottom: 10px;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .slot-card {
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 15px;
+      position: relative;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    .slot-card.active {
+      border: 2px solid #881337;
+    }
+    .slot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .slot-title {
+      font-weight: bold;
+      font-size: 16px;
+      color: #b91c1c;
+    }
+    .slot-status {
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 10px;
+      background-color: #333;
+    }
+    .status-active {
+      background-color: #166534;
+    }
+    .status-inactive {
+      background-color: #555;
+    }
+    .proxy-info {
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .proxy-info div {
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .proxy-label {
+      font-weight: 500;
+      color: #aaa;
+      display: inline-block;
+      width: 60px;
+    }
+    .button-group {
+      display: flex;
+      justify-content: space-between;
+    }
+    button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .config-btn {
+      background-color: #881337;
+      color: white;
+    }
+    .config-btn:hover {
+      background-color: #9f1239;
+    }
+    .clear-btn {
+      background-color: #555;
+      color: white;
+    }
+    .clear-btn:hover {
+      background-color: #666;
+    }
+    .global-actions {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .global-actions button {
+      padding: 8px 15px;
+    }
+    .apply-all-btn {
+      background-color: #881337;
+      color: white;
+    }
+    .apply-all-btn:hover {
+      background-color: #9f1239;
+    }
+    .reset-all-btn {
+      background-color: #333;
+      color: white;
+    }
+    .reset-all-btn:hover {
+      background-color: #444;
+    }
+    .import-export-btn {
+      background-color: #555;
+      color: white;
+    }
+    .import-export-btn:hover {
+      background-color: #666;
+    }
+    .no-proxy {
+      color: #888;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h2>Configuration des Proxies par Slot</h2>
+  
+  <div class="container" id="slots-container">
+    <!-- Les slots seront générés dynamiquement ici -->
+  </div>
+  
+  <div class="global-actions">
+    <button id="apply-all-btn" class="apply-all-btn">Appliquer les changements</button>
+    <button id="import-export-btn" class="import-export-btn">Importer/Exporter</button>
+    <button id="reset-all-btn" class="reset-all-btn">Réinitialiser tous les proxies</button>
+  </div>
+
+  <script>
+    // Cette partie sera gérée par le preload.js
+    document.addEventListener('DOMContentLoaded', () => {
+      // Récupérer les informations sur les slots et les proxies
+      window.proxyAPI.getSlotInfo().then(slots => {
+        renderSlots(slots);
+      });
+
+      // Fonction pour rendre les slots
+      function renderSlots(slots) {
+        const container = document.getElementById('slots-container');
+        container.innerHTML = '';
+        
+        slots.forEach(slot => {
+          const slotElement = document.createElement('div');
+          slotElement.className = `slot-card ${slot.active ? 'active' : ''}`;
+          
+          const proxyInfo = slot.proxy || { enabled: false };
+          const hasProxy = proxyInfo.enabled && proxyInfo.host && proxyInfo.port;
+          
+          slotElement.innerHTML = `
+            <div class="slot-header">
+              <div class="slot-title">Slot ${slot.id + 1}</div>
+              <div class="slot-status ${hasProxy ? 'status-active' : 'status-inactive'}">
+                ${hasProxy ? 'Proxy Actif' : 'Sans Proxy'}
+              </div>
+            </div>
+            <div class="proxy-info">
+              ${hasProxy ? `
+                <div><span class="proxy-label">Hôte:</span> ${proxyInfo.host}</div>
+                <div><span class="proxy-label">Port:</span> ${proxyInfo.port}</div>
+                ${proxyInfo.protocol ? `<div><span class="proxy-label">Type:</span> ${proxyInfo.protocol}</div>` : ''}
+                ${proxyInfo.username ? `<div><span class="proxy-label">Auth:</span> ${proxyInfo.username ? 'Oui' : 'Non'}</div>` : ''}
+              ` : `
+                <div class="no-proxy">Aucun proxy configuré</div>
+              `}
+            </div>
+            <div class="button-group">
+              <button class="config-btn" data-slot-id="${slot.id}">Configurer</button>
+              ${hasProxy ? `<button class="clear-btn" data-slot-id="${slot.id}">Supprimer</button>` : ''}
+            </div>
+          `;
+          
+          container.appendChild(slotElement);
+        });
+        
+        // Ajouter les écouteurs d'événements pour les boutons
+        document.querySelectorAll('.config-btn').forEach(button => {
+          button.addEventListener('click', (e) => {
+            const slotId = parseInt(e.target.getAttribute('data-slot-id'));
+            window.proxyAPI.openProxyConfig(slotId);
+          });
+        });
+        
+        document.querySelectorAll('.clear-btn').forEach(button => {
+          button.addEventListener('click', (e) => {
+            const slotId = parseInt(e.target.getAttribute('data-slot-id'));
+            window.proxyAPI.removeProxy(slotId).then(() => {
+              // Rafraîchir l'interface
+              window.proxyAPI.getSlotInfo().then(slots => {
+                renderSlots(slots);
+              });
+            });
+          });
+        });
+      }
+      
+      // Écouteurs pour les boutons globaux
+      document.getElementById('apply-all-btn').addEventListener('click', () => {
+        window.proxyAPI.applyAllProxies().then(() => {
+          alert('Tous les proxies ont été appliqués avec succès!');
+        });
+      });
+      
+      document.getElementById('reset-all-btn').addEventListener('click', () => {
+        if (confirm('Êtes-vous sûr de vouloir supprimer tous les proxies?')) {
+          window.proxyAPI.resetAllProxies().then(() => {
+            window.proxyAPI.getSlotInfo().then(slots => {
+              renderSlots(slots);
+            });
+          });
+        }
+      });
+      
+      document.getElementById('import-export-btn').addEventListener('click', () => {
+        window.proxyAPI.openImportExport();
+      });
+    });
+  </script>
+</body>
+</html>

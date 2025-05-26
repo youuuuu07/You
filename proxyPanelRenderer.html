@@ -1,0 +1,229 @@
+// Attendre que le DOM soit chargé
+document.addEventListener('DOMContentLoaded', async () => {
+  // Éléments du DOM
+  const viewSelect = document.getElementById('view-select');
+  const proxyEnabled = document.getElementById('proxy-enabled');
+  const proxyProtocol = document.getElementById('proxy-protocol');
+  const proxyHost = document.getElementById('proxy-host');
+  const proxyPort = document.getElementById('proxy-port');
+  const proxyBypass = document.getElementById('proxy-bypass');
+  const saveProxyBtn = document.getElementById('save-proxy');
+  const clearProxyBtn = document.getElementById('clear-proxy');
+  const closeBtn = document.getElementById('close-panel');
+  const proxyListContainer = document.getElementById('proxy-list');
+  const emptyState = document.getElementById('empty-state');
+
+  // Charger la liste des vues disponibles
+  async function loadViewsList() {
+    try {
+      const views = await window.proxyAPI.getViewsList();
+      
+      // Vider la liste déroulante
+      viewSelect.innerHTML = '';
+      
+      // Ajouter les options pour chaque vue
+      views.forEach(view => {
+        const option = document.createElement('option');
+        option.value = view.index;
+        option.textContent = `Vue ${view.number} (${view.type})`;
+        viewSelect.appendChild(option);
+      });
+      
+      // Charger la configuration du proxy pour la vue sélectionnée
+      if (views.length > 0) {
+        loadProxyConfig(views[0].index);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de la liste des vues:', error);
+    }
+  }
+
+  // Charger la configuration du proxy pour une vue spécifique
+  async function loadProxyConfig(viewIndex) {
+    try {
+      const proxyConfig = await window.proxyAPI.getProxyForView(viewIndex);
+      
+      // Remplir le formulaire avec la configuration existante ou les valeurs par défaut
+      if (proxyConfig) {
+        proxyEnabled.checked = proxyConfig.enabled || false;
+        proxyProtocol.value = proxyConfig.protocol || 'http';
+        proxyHost.value = proxyConfig.host || '';
+        proxyPort.value = proxyConfig.port || '';
+        proxyBypass.value = proxyConfig.bypassList || '';
+      } else {
+        // Valeurs par défaut
+        proxyEnabled.checked = false;
+        proxyProtocol.value = 'http';
+        proxyHost.value = '';
+        proxyPort.value = '';
+        proxyBypass.value = '';
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de la configuration du proxy:', error);
+    }
+  }
+
+  // Mettre à jour la liste des proxies configurés
+  async function updateProxyList() {
+    try {
+      const proxies = await window.proxyAPI.getAllProxies();
+      const proxyIndices = Object.keys(proxies);
+      
+      // Vider le conteneur
+      proxyListContainer.innerHTML = '';
+      
+      // Afficher l'état vide si aucun proxy n'est configuré
+      if (proxyIndices.length === 0) {
+        proxyListContainer.appendChild(emptyState);
+        return;
+      }
+      
+      // Masquer l'état vide
+      if (emptyState.parentNode) {
+        emptyState.parentNode.removeChild(emptyState);
+      }
+      
+      // Créer une carte pour chaque proxy configuré
+      proxyIndices.forEach(index => {
+        const proxyConfig = proxies[index];
+        const card = createProxyCard(index, proxyConfig);
+        proxyListContainer.appendChild(card);
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la liste des proxies:', error);
+    }
+  }
+
+  // Créer une carte pour un proxy configuré
+  function createProxyCard(viewIndex, proxyConfig) {
+    const card = document.createElement('div');
+    card.className = 'proxy-card';
+    if (proxyConfig.enabled) {
+      card.classList.add('active');
+    }
+    
+    // Obtenir le numéro de vue et le type à partir de l'index
+    const viewNumber = parseInt(viewIndex) + 1; // Ajuster selon votre logique d'indexation
+    const viewType = parseInt(viewIndex) % 5 === 0 ? 'Host' : 'Player'; // Exemple de logique
+    
+    card.innerHTML = `
+      <h3>
+        Vue ${viewNumber} (${viewType})
+        <span class="status ${proxyConfig.enabled ? 'enabled' : 'disabled'}">
+          ${proxyConfig.enabled ? 'Activé' : 'Désactivé'}
+        </span>
+      </h3>
+      <div>
+        <p><strong>Protocole:</strong> ${proxyConfig.protocol}</p>
+        <p><strong>Adresse:</strong> ${proxyConfig.host}:${proxyConfig.port}</p>
+        ${proxyConfig.bypassList ? `<p><strong>Contournement:</strong> ${proxyConfig.bypassList}</p>` : ''}
+      </div>
+      <div class="button-group">
+        <button class="btn-primary edit-proxy" data-index="${viewIndex}">Modifier</button>
+        <button class="btn-danger remove-proxy" data-index="${viewIndex}">Supprimer</button>
+      </div>
+    `;
+    
+    // Ajouter des écouteurs d'événements pour les boutons
+    card.querySelector('.edit-proxy').addEventListener('click', () => {
+      viewSelect.value = viewIndex;
+      loadProxyConfig(viewIndex);
+    });
+    
+    card.querySelector('.remove-proxy').addEventListener('click', async () => {
+      if (confirm(`Voulez-vous vraiment supprimer le proxy pour la Vue ${viewNumber} (${viewType}) ?`)) {
+        await window.proxyAPI.removeProxyForView(viewIndex);
+        updateProxyList();
+      }
+    });
+    
+    return card;
+  }
+
+  // Enregistrer la configuration du proxy
+  async function saveProxyConfig() {
+    const viewIndex = viewSelect.value;
+    
+    // Valider les entrées
+    if (proxyEnabled.checked && (!proxyHost.value || !proxyPort.value)) {
+      alert('Veuillez saisir l\'hôte et le port du proxy.');
+      return;
+    }
+    
+    // Créer l'objet de configuration
+    const proxyConfig = {
+      enabled: proxyEnabled.checked,
+      protocol: proxyProtocol.value,
+      host: proxyHost.value,
+      port: proxyPort.value,
+      bypassList: proxyBypass.value
+    };
+    
+    try {
+      // Enregistrer la configuration
+      await window.proxyAPI.setProxyForView(viewIndex, proxyConfig);
+      
+      // Appliquer les proxies à toutes les vues
+      await window.proxyAPI.applyProxiesToAllViews();
+      
+      // Mettre à jour la liste des proxies
+      updateProxyList();
+      
+      alert('Configuration du proxy enregistrée avec succès !');
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement de la configuration du proxy:', error);
+      alert('Erreur lors de l\'enregistrement de la configuration du proxy.');
+    }
+  }
+
+  // Supprimer la configuration du proxy
+  async function clearProxyConfig() {
+    const viewIndex = viewSelect.value;
+    
+    try {
+      // Supprimer la configuration
+      await window.proxyAPI.removeProxyForView(viewIndex);
+      
+      // Réinitialiser le formulaire
+      proxyEnabled.checked = false;
+      proxyProtocol.value = 'http';
+      proxyHost.value = '';
+      proxyPort.value = '';
+      proxyBypass.value = '';
+      
+      // Appliquer les proxies à toutes les vues
+      await window.proxyAPI.applyProxiesToAllViews();
+      
+      // Mettre à jour la liste des proxies
+      updateProxyList();
+      
+      alert('Configuration du proxy supprimée avec succès !');
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la configuration du proxy:', error);
+      alert('Erreur lors de la suppression de la configuration du proxy.');
+    }
+  }
+
+  // Fermer le panneau
+  function closePanel() {
+    window.proxyAPI.closePanel();
+  }
+
+  // Ajouter des écouteurs d'événements
+  viewSelect.addEventListener('change', () => {
+    loadProxyConfig(viewSelect.value);
+  });
+  
+  saveProxyBtn.addEventListener('click', saveProxyConfig);
+  clearProxyBtn.addEventListener('click', clearProxyConfig);
+  closeBtn.addEventListener('click', closePanel);
+  
+  // Écouter les mises à jour de proxy
+  document.addEventListener('proxy-updated', () => {
+    updateProxyList();
+  });
+  
+  // Initialiser l'interface
+  loadViewsList();
+  updateProxyList();
+});

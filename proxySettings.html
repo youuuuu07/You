@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Paramètres Proxy</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1f1f1f;
+            color: #ffffff;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #0078d4;
+            margin-bottom: 20px;
+        }
+
+        .proxy-form {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #cccccc;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #404040;
+            border-radius: 4px;
+            background-color: #333333;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #005a9e;
+        }
+
+        .proxy-list {
+            margin-top: 20px;
+        }
+
+        .proxy-item {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .proxy-info {
+            flex-grow: 1;
+        }
+
+        .proxy-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .remove-btn {
+            background-color: #d83b01;
+        }
+
+        .remove-btn:hover {
+            background-color: #a12b01;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Paramètres Proxy</h1>
+        
+        <div class="proxy-form">
+            <div class="form-group">
+                <label for="url">URL Xbox:</label>
+                <input type="text" id="url" placeholder="ex: https://www.xbox.com/fr-FR/">
+            </div>
+            
+            <div class="form-group">
+                <label for="host">Hôte Proxy:</label>
+                <input type="text" id="host" placeholder="ex: proxy.example.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="port">Port:</label>
+                <input type="number" id="port" placeholder="ex: 8080">
+            </div>
+            
+            <div class="form-group">
+                <label for="username">Nom d'utilisateur (optionnel):</label>
+                <input type="text" id="username" placeholder="Nom d'utilisateur">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Mot de passe (optionnel):</label>
+                <input type="password" id="password" placeholder="Mot de passe">
+            </div>
+            
+            <button id="saveProxy">Enregistrer</button>
+        </div>
+
+        <div class="proxy-list" id="proxyList">
+            <!-- La liste des proxies sera générée dynamiquement -->
+        </div>
+    </div>
+
+    <script src="proxySettings.js"></script>
+</body>
+</html> 

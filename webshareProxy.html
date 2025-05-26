@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration des proxies Webshare</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #1e1e1e;
+      color: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+    
+    h1 {
+      color: #881337;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #b91c1c;
+      padding-bottom: 10px;
+    }
+    
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+    
+    .proxy-list {
+      margin-bottom: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      border-radius: 5px;
+      padding: 10px;
+    }
+    
+    .proxy-item {
+      padding: 10px;
+      margin-bottom: 5px;
+      background-color: #2a2a2a;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .proxy-item:hover {
+      background-color: #333;
+    }
+    
+    .proxy-item.selected {
+      background-color: #881337;
+    }
+    
+    .proxy-details {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .proxy-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .proxy-address {
+      font-size: 0.9em;
+      color: #ccc;
+    }
+    
+    .view-list {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .view-item {
+      padding: 10px;
+      background-color: #2a2a2a;
+      border-radius: 5px;
+      text-align: center;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .view-item:hover {
+      background-color: #333;
+    }
+    
+    .view-item.selected {
+      background-color: #881337;
+    }
+    
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+    
+    button {
+      padding: 10px 15px;
+      background-color: #881337;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #b91c1c;
+    }
+    
+    button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #2a2a2a;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #881337;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Configuration des proxies Webshare</h1>
+    
+    <h2>Vues disponibles</h2>
+    <div class="view-list" id="viewList">
+      <!-- Les vues seront ajoutées ici dynamiquement -->
+    </div>
+    
+    <h2>Proxies disponibles</h2>
+    <div class="proxy-list" id="proxyList">
+      <!-- Les proxies seront ajoutés ici dynamiquement -->
+    </div>
+    
+    <div class="button-container">
+      <button id="applyButton" disabled>Appliquer le proxy</button>
+      <button id="reloadButton">Recharger les proxies</button>
+      <button id="closeButton">Fermer</button>
+    </div>
+    
+    <div class="status" id="status">
+      Chargement des proxies...
+    </div>
+  </div>
+  
+  <script>
+    // Variables globales
+    let proxies = [];
+    let views = [];
+    let selectedProxyIndex = -1;
+    let selectedViewIndex = -1;
+    
+    // Éléments DOM
+    const proxyListElement = document.getElementById('proxyList');
+    const viewListElement = document.getElementById('viewList');
+    const applyButton = document.getElementById('applyButton');
+    const reloadButton = document.getElementById('reloadButton');
+    const closeButton = document.getElementById('closeButton');
+    const statusElement = document.getElementById('status');
+    
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Charger les proxies
+      await loadProxies();
+      
+      // Charger les vues
+      await loadViews();
+      
+      // Configurer les événements
+      setupEventListeners();
+    });
+    
+    // Charger les proxies depuis l'API
+    async function loadProxies() {
+      try {
+        statusElement.innerHTML = '<div class="loading"></div> Chargement des proxies...';
+        
+        // Obtenir les proxies
+        proxies = await window.webshareProxyAPI.getProxies();
+        
+        // Afficher les proxies
+        renderProxies();
+        
+        statusElement.textContent = `${proxies.length} proxies chargés`;
+      } catch (error) {
+        statusElement.textContent = `Erreur lors du chargement des proxies: ${error.message}`;
+      }
+    }
+    
+    // Charger les vues disponibles
+    async function loadViews() {
+      try {
+        // Obtenir les vues
+        views = await window.proxyAPI.getViewsList();
+        
+        // Afficher les vues
+        renderViews();
+      } catch (error) {
+        statusElement.textContent = `Erreur lors du chargement des vues: ${error.message}`;
+      }
+    }
+    
+    // Afficher les proxies dans la liste
+    function renderProxies() {
+      proxyListElement.innerHTML = '';
+      
+      proxies.forEach((proxy, index) => {
+        const proxyItem = document.createElement('div');
+        proxyItem.className = 'proxy-item';
+        proxyItem.dataset.index = index;
+        
+        if (index === selectedProxyIndex) {
+          proxyItem.classList.add('selected');
+        }
+        
+        const proxyDetails = document.createElement('div');
+        proxyDetails.className = 'proxy-details';
+        
+        const proxyName = document.createElement('div');
+        proxyName.className = 'proxy-name';
+        proxyName.textContent = proxy.name;
+        
+        const proxyAddress = document.createElement('div');
+        proxyAddress.className = 'proxy-address';
+        
+        if (proxy.enabled && proxy.host && proxy.port) {
+          proxyAddress.textContent = `${proxy.protocol}://${proxy.host}:${proxy.port}`;
+        } else {
+          proxyAddress.textContent = 'Connexion directe';
+        }
+        
+        proxyDetails.appendChild(proxyName);
+        proxyDetails.appendChild(proxyAddress);
+        
+        proxyItem.appendChild(proxyDetails);
+        
+        proxyItem.addEventListener('click', () => {
+          selectProxy(index);
+        });
+        
+        proxyListElement.appendChild(proxyItem);
+      });
+    }
+    
+    // Afficher les vues dans la liste
+    function renderViews() {
+      viewListElement.innerHTML = '';
+      
+      views.forEach((view, index) => {
+        const viewItem = document.createElement('div');
+        viewItem.className = 'view-item';
+        viewItem.dataset.index = index;
+        
+        if (index === selectedViewIndex) {
+          viewItem.classList.add('selected');
+        }
+        
+        viewItem.textContent = `Vue ${index + 1}`;
+        
+        viewItem.addEventListener('click', () => {
+          selectView(index);
+        });
+        
+        viewListElement.appendChild(viewItem);
+      });
+    }
+    
+    // Sélectionner un proxy
+    function selectProxy(index) {
+      selectedProxyIndex = index;
+      
+      // Mettre à jour l'interface
+      document.querySelectorAll('.proxy-item').forEach(item => {
+        item.classList.remove('selected');
+      });
+      
+      const selectedItem = document.querySelector(`.proxy-item[data-index="${index}"]`);
+      if (selectedItem) {
+        selectedItem.classList.add('selected');
+      }
+      
+      // Activer le bouton d'application si une vue est également sélectionnée
+      applyButton.disabled = selectedViewIndex === -1;
+    }
+    
+    // Sélectionner une vue
+    async function selectView(index) {
+      selectedViewIndex = index;
+      
+      // Mettre à jour l'interface
+      document.querySelectorAll('.view-item').forEach(item => {
+        item.classList.remove('selected');
+      });
+      
+      const selectedItem = document.querySelector(`.view-item[data-index="${index}"]`);
+      if (selectedItem) {
+        selectedItem.classList.add('selected');
+      }
+      
+      // Obtenir le proxy actuellement utilisé pour cette vue
+      try {
+        const currentProxy = await window.webshareProxyAPI.getCurrentProxy(index);
+        if (currentProxy) {
+          const currentProxyIndex = proxies.findIndex(p => 
+            p.host === currentProxy.host && 
+            p.port === currentProxy.port && 
+            p.username === currentProxy.username
+          );
+          
+          if (currentProxyIndex !== -1) {
+            selectProxy(currentProxyIndex);
+          } else {
+            // Si aucun proxy correspondant n'est trouvé, sélectionner le proxy direct (index 0)
+            selectProxy(0);
+          }
+        } else {
+          // Si aucun proxy n'est configuré, sélectionner le proxy direct (index 0)
+          selectProxy(0);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération du proxy actuel:', error);
+        // En cas d'erreur, sélectionner le proxy direct (index 0)
+        selectProxy(0);
+      }
+      
+      // Activer le bouton d'application si un proxy est également sélectionné
+      applyButton.disabled = selectedProxyIndex === -1;
+    }
+    
+    // Configurer les écouteurs d'événements
+    function setupEventListeners() {
+      // Bouton d'application du proxy
+      applyButton.addEventListener('click', async () => {
+        if (selectedViewIndex !== -1 && selectedProxyIndex !== -1) {
+          try {
+            statusElement.innerHTML = '<div class="loading"></div> Application du proxy...';
+            
+            // Appliquer le proxy à la vue
+            await window.webshareProxyAPI.setProxyForView(selectedViewIndex, selectedProxyIndex);
+            
+            statusElement.textContent = `Proxy appliqué à la vue ${selectedViewIndex + 1}`;
+          } catch (error) {
+            statusElement.textContent = `Erreur lors de l'application du proxy: ${error.message}`;
+          }
+        }
+      });
+      
+      // Bouton de rechargement des proxies
+      reloadButton.addEventListener('click', async () => {
+        try {
+          statusElement.innerHTML = '<div class="loading"></div> Rechargement des proxies...';
+          
+          // Recharger les proxies
+          proxies = await window.webshareProxyAPI.reloadProxies();
+          
+          // Afficher les proxies
+          renderProxies();
+          
+          statusElement.textContent = `${proxies.length} proxies rechargés`;
+        } catch (error) {
+          statusElement.textContent = `Erreur lors du rechargement des proxies: ${error.message}`;
+        }
+      });
+      
+      // Bouton de fermeture
+      closeButton.addEventListener('click', () => {
+        window.webshareProxyAPI.closeWindow();
+      });
+    }
+  </script>
+</body>
+</html>
